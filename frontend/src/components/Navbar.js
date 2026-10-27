@@ -1,77 +1,99 @@
 'use client';
 
 import Link from 'next/link';
+import { useTheme } from '@/context/ThemeContext';
+import { useAuth } from '@/context/AuthContext';
 
-export default function Navbar() {
+export default function Navbar({ onOpenAuth }) {
+  const { theme, toggleTheme } = useTheme();
+  const { user, logout } = useAuth();
+
   return (
     <header style={{
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      padding: '1.25rem 2rem',
-      borderBottom: '1px solid var(--border-subtle)',
-      background: 'rgba(9, 13, 22, 0.75)',
-      backdropFilter: 'blur(10px)',
+      padding: 'var(--space-3) var(--space-6)',
+      borderBottom: '1px solid var(--border)',
+      backgroundColor: 'var(--bg-surface)',
       position: 'sticky',
       top: 0,
-      zIndex: 50,
+      zIndex: 40,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        <div style={{
-          width: '32px',
-          height: '32px',
-          borderRadius: '8px',
-          background: 'var(--brand-gradient)',
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-6)' }}>
+        <Link href="/" style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          fontWeight: 700,
-          color: '#fff',
-          fontSize: '1.1rem',
-          boxShadow: 'var(--shadow-glow)'
+          gap: 'var(--space-2)',
+          fontWeight: 600,
+          letterSpacing: '-0.3px',
+          color: 'var(--text-primary)',
         }}>
-          P
-        </div>
-        <span style={{ fontSize: '1.25rem', fontWeight: 700, letterSpacing: '-0.5px' }}>
-          Pulse<span style={{ color: 'var(--brand-primary)' }}>.</span>
-        </span>
+          <span style={{
+            display: 'inline-block',
+            width: '18px',
+            height: '18px',
+            backgroundColor: 'var(--accent)',
+            borderRadius: 'var(--radius-sm)',
+          }}></span>
+          Pulse
+        </Link>
+
+        <nav style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', fontSize: 'var(--text-sm)' }}>
+          <Link href="/" style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
+            Overview
+          </Link>
+          <Link href="#monitors" style={{ color: 'var(--text-secondary)' }}>
+            Monitors
+          </Link>
+          <Link href="#status-pages" style={{ color: 'var(--text-secondary)' }}>
+            Status pages
+          </Link>
+        </nav>
       </div>
 
-      <nav style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', fontSize: '0.9rem' }}>
-        <Link href="/" style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
-          Dashboard
-        </Link>
-        <Link href="#monitors" style={{ color: 'var(--text-secondary)', transition: 'color 0.2s' }}>
-          Monitors
-        </Link>
-        <Link href="#status-pages" style={{ color: 'var(--text-secondary)', transition: 'color 0.2s' }}>
-          Status Pages
-        </Link>
-      </nav>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+        {/* Light/Dark Mode Switcher */}
+        <button
+          onClick={toggleTheme}
+          aria-label="Toggle visual theme"
+          className="btn-secondary"
+          style={{ padding: '4px 10px', fontSize: 'var(--text-xs)' }}
+        >
+          {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+        </button>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <Link href="#login" style={{
-          padding: '0.5rem 1rem',
-          fontSize: '0.875rem',
-          color: 'var(--text-primary)',
-          borderRadius: 'var(--radius-sm)',
-          border: '1px solid var(--border-subtle)',
-          transition: 'all 0.2s'
-        }}>
-          Sign In
-        </Link>
-        <Link href="#signup" style={{
-          padding: '0.5rem 1rem',
-          fontSize: '0.875rem',
-          fontWeight: 600,
-          color: '#fff',
-          background: 'var(--brand-primary)',
-          borderRadius: 'var(--radius-sm)',
-          boxShadow: '0 2px 10px var(--brand-glow)',
-          transition: 'all 0.2s'
-        }}>
-          Get Started
-        </Link>
+        {user ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+              {user.email}
+            </span>
+            <button
+              onClick={logout}
+              className="btn-secondary"
+              style={{ padding: '4px 10px', fontSize: 'var(--text-xs)' }}
+            >
+              Sign out
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+            <button
+              onClick={() => onOpenAuth && onOpenAuth('login')}
+              className="btn-secondary"
+              style={{ padding: '6px 12px', fontSize: 'var(--text-sm)' }}
+            >
+              Sign in
+            </button>
+            <button
+              onClick={() => onOpenAuth && onOpenAuth('signup')}
+              className="btn-primary"
+              style={{ padding: '6px 12px', fontSize: 'var(--text-sm)' }}
+            >
+              Create account
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );

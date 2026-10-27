@@ -60,34 +60,30 @@ export default function HealthStatus() {
   const redisHealth = healthData?.components?.redis;
 
   return (
-    <div className="glass-panel" style={{ padding: '1.75rem', maxWidth: '780px', margin: '2rem auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+    <div style={{
+      backgroundColor: 'var(--bg-surface)',
+      border: '1px solid var(--border)',
+      borderRadius: 'var(--radius)',
+      padding: 'var(--space-5)',
+      boxShadow: 'var(--shadow-sm)',
+      margin: 'var(--space-6) 0',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)' }}>
         <div>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <span className={`ping-indicator ${isReady ? 'ping-up' : 'ping-down'}`}></span>
-            Core System Readiness
-          </h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.2rem' }}>
-            Real-time readiness telemetry from <code style={{ color: 'var(--text-secondary)' }}>/api/v1/health/ready</code>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+            <span className={`status-dot ${isReady ? 'status-dot-up' : 'status-dot-down'}`}></span>
+            <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600 }}>System readiness telemetry</h2>
+          </div>
+          <p style={{ color: 'var(--text-muted)', fontSize: 'var(--text-xs)', marginTop: 'var(--space-1)' }}>
+            Polling <code className="font-mono">/api/v1/health/ready</code> every 10 seconds
           </p>
         </div>
 
         <button
           onClick={fetchHealth}
           disabled={loading}
-          style={{
-            background: 'var(--bg-surface)',
-            border: '1px solid var(--border-subtle)',
-            color: 'var(--text-primary)',
-            padding: '0.45rem 0.9rem',
-            borderRadius: 'var(--radius-sm)',
-            cursor: loading ? 'not-allowed' : 'pointer',
-            fontSize: '0.8rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.4rem',
-            transition: 'all 0.2s'
-          }}
+          className="btn-secondary"
+          style={{ padding: '4px 10px', fontSize: 'var(--text-xs)' }}
         >
           {loading ? 'Checking...' : 'Refresh'}
         </button>
@@ -95,81 +91,73 @@ export default function HealthStatus() {
 
       {error ? (
         <div style={{
-          padding: '1rem',
-          background: 'rgba(239, 68, 68, 0.1)',
+          padding: 'var(--space-3)',
+          backgroundColor: 'var(--status-down-subtle)',
           border: '1px solid var(--status-down)',
-          borderRadius: 'var(--radius-md)',
-          color: '#fca5a5',
-          fontSize: '0.875rem'
+          borderRadius: 'var(--radius)',
+          color: 'var(--status-down)',
+          fontSize: 'var(--text-sm)',
         }}>
-          <strong>Connection Error:</strong> {error}
+          {error}
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-          {/* PostgreSQL Card */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 'var(--space-3)' }}>
+          {/* PostgreSQL / TimescaleDB */}
           <div style={{
-            background: 'var(--bg-secondary)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-md)',
-            padding: '1.25rem'
+            backgroundColor: 'var(--bg-subtle)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-sm)',
+            padding: 'var(--space-3) var(--space-4)',
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>PostgreSQL / TimescaleDB</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-2)' }}>
+              <span style={{ fontSize: 'var(--text-sm)', fontWeight: 500 }}>PostgreSQL</span>
               <span style={{
-                fontSize: '0.75rem',
-                padding: '0.2rem 0.5rem',
-                borderRadius: 'var(--radius-full)',
+                fontSize: 'var(--text-xs)',
                 fontWeight: 600,
-                background: dbHealth?.status === 'healthy' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
                 color: dbHealth?.status === 'healthy' ? 'var(--status-up)' : 'var(--status-down)',
-                border: `1px solid ${dbHealth?.status === 'healthy' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
               }}>
-                {dbHealth?.status ? dbHealth.status.toUpperCase() : 'UNKNOWN'}
+                {dbHealth?.status ? dbHealth.status.toUpperCase() : 'CHECKING'}
               </span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.825rem', color: 'var(--text-muted)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
               <span>Latency</span>
               <span className="font-mono" style={{ color: 'var(--text-primary)' }}>
                 {dbHealth?.latency_ms !== undefined ? `${dbHealth.latency_ms} ms` : '—'}
               </span>
             </div>
             {dbHealth?.error && (
-              <p style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#f87171' }}>
-                Error: {dbHealth.error}
+              <p style={{ marginTop: 'var(--space-1)', fontSize: 'var(--text-xs)', color: 'var(--status-down)' }}>
+                {dbHealth.error}
               </p>
             )}
           </div>
 
-          {/* Redis Card */}
+          {/* Redis */}
           <div style={{
-            background: 'var(--bg-secondary)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-md)',
-            padding: '1.25rem'
+            backgroundColor: 'var(--bg-subtle)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-sm)',
+            padding: 'var(--space-3) var(--space-4)',
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>Redis Cache & Queues</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-2)' }}>
+              <span style={{ fontSize: 'var(--text-sm)', fontWeight: 500 }}>Redis</span>
               <span style={{
-                fontSize: '0.75rem',
-                padding: '0.2rem 0.5rem',
-                borderRadius: 'var(--radius-full)',
+                fontSize: 'var(--text-xs)',
                 fontWeight: 600,
-                background: redisHealth?.status === 'healthy' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
                 color: redisHealth?.status === 'healthy' ? 'var(--status-up)' : 'var(--status-down)',
-                border: `1px solid ${redisHealth?.status === 'healthy' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
               }}>
-                {redisHealth?.status ? redisHealth.status.toUpperCase() : 'UNKNOWN'}
+                {redisHealth?.status ? redisHealth.status.toUpperCase() : 'CHECKING'}
               </span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.825rem', color: 'var(--text-muted)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
               <span>Latency</span>
               <span className="font-mono" style={{ color: 'var(--text-primary)' }}>
                 {redisHealth?.latency_ms !== undefined ? `${redisHealth.latency_ms} ms` : '—'}
               </span>
             </div>
             {redisHealth?.error && (
-              <p style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#f87171' }}>
-                Error: {redisHealth.error}
+              <p style={{ marginTop: 'var(--space-1)', fontSize: 'var(--text-xs)', color: 'var(--status-down)' }}>
+                {redisHealth.error}
               </p>
             )}
           </div>
@@ -177,8 +165,8 @@ export default function HealthStatus() {
       )}
 
       {lastUpdated && (
-        <div style={{ marginTop: '1rem', fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'right' }}>
-          Auto-refreshing every 10s · Last checked at {lastUpdated}
+        <div style={{ marginTop: 'var(--space-3)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', textAlign: 'right' }}>
+          Last checked at {lastUpdated}
         </div>
       )}
     </div>

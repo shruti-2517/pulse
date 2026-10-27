@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     REDIS_PASSWORD: str = ""
     REDIS_URL: str = "redis://redis:6379/0"
 
+    # Security & JWT
+    JWT_SECRET_KEY: str = "pulse_dev_insecure_secret_key_change_in_production_min_32_chars"
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
+
     # CORS
     BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
 

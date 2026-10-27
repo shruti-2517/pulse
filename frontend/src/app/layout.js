@@ -1,14 +1,22 @@
 import "./globals.css";
+import { ThemeProvider } from "@/context/ThemeContext";
+import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata = {
-  title: "Pulse | Distributed Uptime Monitoring & Status Pages",
-  description: "Real-time distributed uptime monitoring, multi-region probes, status pages, and alerting.",
+  title: "Pulse — Uptime Monitoring Platform",
+  description: "Distributed uptime monitoring, multi-region probes, and status pages.",
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" data-theme="dark">
+      <body>
+        <ThemeProvider>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </ThemeProvider>
+      </body>
     </html>
   );
 }

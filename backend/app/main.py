@@ -3,7 +3,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.router import api_router
 from app.core.config import get_settings
-from app.core.database import close_connections
+from app.core.database import close_connections, engine
+from app.models.base import Base
 
 settings = get_settings()
 
@@ -12,10 +13,15 @@ settings = get_settings()
 async def lifespan(app: FastAPI):
     """
     Application lifespan context manager.
-    Startup: Initializes pools.
+    Startup: Initializes tables and connection pools.
     Shutdown: Closes database engines and Redis connections cleanly.
     """
-    # Startup actions (if any)
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    except Exception:
+        # If DB is not reachable on cold start, don't crash app process so liveness passes
+        pass
     yield
     # Shutdown actions
     await close_connections()
