@@ -4,14 +4,24 @@ import { useState } from 'react';
 import Navbar from '@/components/Navbar';
 import HealthStatus from '@/components/HealthStatus';
 import AuthModal from '@/components/AuthModal';
+import MonitorList from '@/components/MonitorList';
+import CreateMonitorModal from '@/components/CreateMonitorModal';
 import { useAuth } from '@/context/AuthContext';
 
 export default function Home() {
   const [authModal, setAuthModal] = useState({ isOpen: false, mode: 'login' });
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [monitorListKey, setMonitorListKey] = useState(0);
+
   const { user } = useAuth();
 
   const openAuth = (mode) => setAuthModal({ isOpen: true, mode });
   const closeAuth = () => setAuthModal({ isOpen: false, mode: 'login' });
+
+  const handleMonitorCreated = () => {
+    // Refresh monitor list
+    setMonitorListKey((k) => k + 1);
+  };
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -65,37 +75,14 @@ export default function Home() {
         {/* Live System Health */}
         <HealthStatus />
 
-        {/* User Session Info or Callout */}
+        {/* User Monitor Management or Auth Gate */}
         {user ? (
-          <div style={{
-            backgroundColor: 'var(--bg-surface)',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius)',
-            padding: 'var(--space-5)',
-            marginBottom: 'var(--space-6)',
-          }}>
-            <h3 style={{ fontSize: 'var(--text-md)', fontWeight: 600, marginBottom: 'var(--space-2)' }}>
-              Operator profile
-            </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-4)', fontSize: 'var(--text-sm)' }}>
-              <div>
-                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: 'var(--text-xs)' }}>USER ID</span>
-                <span className="font-mono">{user.id}</span>
-              </div>
-              <div>
-                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: 'var(--text-xs)' }}>EMAIL</span>
-                <span>{user.email}</span>
-              </div>
-              <div>
-                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: 'var(--text-xs)' }}>STATUS</span>
-                <span style={{ color: 'var(--status-up)', fontWeight: 500 }}>Active</span>
-              </div>
-              <div>
-                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: 'var(--text-xs)' }}>REGISTERED</span>
-                <span>{new Date(user.created_at).toLocaleDateString()}</span>
-              </div>
-            </div>
-          </div>
+          <section id="monitors">
+            <MonitorList
+              key={monitorListKey}
+              onNewMonitorClick={() => setIsCreateModalOpen(true)}
+            />
+          </section>
         ) : (
           <div style={{
             backgroundColor: 'var(--bg-subtle)',
@@ -159,7 +146,7 @@ export default function Home() {
                 <td style={{ padding: 'var(--space-3) var(--space-4)', fontWeight: 500 }}>Authentication & Cryptography</td>
                 <td style={{ padding: 'var(--space-3) var(--space-4)', color: 'var(--text-secondary)' }}>Bcrypt hashing & JWT signature verification</td>
                 <td style={{ padding: 'var(--space-3) var(--space-4)' }}>
-                  <span style={{ color: 'var(--accent)', fontWeight: 600, fontSize: 'var(--text-xs)' }}>IN PROGRESS</span>
+                  <span style={{ color: 'var(--status-up)', fontWeight: 600, fontSize: 'var(--text-xs)' }}>COMPLETE</span>
                 </td>
               </tr>
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
@@ -167,7 +154,15 @@ export default function Home() {
                 <td style={{ padding: 'var(--space-3) var(--space-4)', fontWeight: 500 }}>Monitor Management (CRUD)</td>
                 <td style={{ padding: 'var(--space-3) var(--space-4)', color: 'var(--text-secondary)' }}>HTTP/TCP endpoints, intervals, regions</td>
                 <td style={{ padding: 'var(--space-3) var(--space-4)' }}>
-                  <span style={{ color: 'var(--text-muted)', fontSize: 'var(--text-xs)' }}>QUEUED</span>
+                  <span style={{ color: 'var(--accent)', fontWeight: 600, fontSize: 'var(--text-xs)' }}>LIVE</span>
+                </td>
+              </tr>
+              <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                <td style={{ padding: 'var(--space-3) var(--space-4)', color: 'var(--text-muted)' }}>04</td>
+                <td style={{ padding: 'var(--space-3) var(--space-4)', fontWeight: 500 }}>Single-Worker Check Execution</td>
+                <td style={{ padding: 'var(--space-3) var(--space-4)', color: 'var(--text-secondary)' }}>Async probe execution & result storage</td>
+                <td style={{ padding: 'var(--space-3) var(--space-4)' }}>
+                  <span style={{ color: 'var(--text-muted)', fontSize: 'var(--text-xs)' }}>NEXT UP</span>
                 </td>
               </tr>
             </tbody>
@@ -186,11 +181,16 @@ export default function Home() {
         Pulse Uptime Platform · Engineering Pair-Programming
       </footer>
 
-      {/* Auth Modal */}
+      {/* Modals */}
       <AuthModal
         isOpen={authModal.isOpen}
         initialMode={authModal.mode}
         onClose={closeAuth}
+      />
+      <CreateMonitorModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onCreated={handleMonitorCreated}
       />
     </div>
   );
