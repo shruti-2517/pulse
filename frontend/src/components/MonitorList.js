@@ -11,6 +11,12 @@ export default function MonitorList({ onNewMonitorClick }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Active monitor for viewing check history
+  const [selectedMonitor, setSelectedMonitor] = useState(null);
+  const [historyResults, setHistoryResults] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [checkingId, setCheckingId] = useState(null);
+
   const fetchMonitors = useCallback(async () => {
     if (!token) return;
     try {
@@ -78,10 +84,59 @@ export default function MonitorList({ onNewMonitorClick }) {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
+        if (selectedMonitor?.id === monitorId) {
+          setSelectedMonitor(null);
+        }
         fetchMonitors();
       }
     } catch {
       // Ignored
+    }
+  };
+
+  const handleRunCheck = async (monitor) => {
+    setCheckingId(monitor.id);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/monitors/${monitor.id}/check`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        fetchMonitors();
+        if (selectedMonitor?.id === monitor.id) {
+          loadHistory(monitor.id);
+        }
+      }
+    } catch {
+      // Ignored
+    } finally {
+      setCheckingId(null);
+    }
+  };
+
+  const loadHistory = async (monitorId) => {
+    setHistoryLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/monitors/${monitorId}/results?limit=15`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setHistoryResults(data);
+      }
+    } catch {
+      // Ignored
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const handleSelectMonitor = (monitor) => {
+    if (selectedMonitor?.id === monitor.id) {
+      setSelectedMonitor(null);
+    } else {
+      setSelectedMonitor(monitor);
+      loadHistory(monitor.id);
     }
   };
 
@@ -152,49 +207,162 @@ export default function MonitorList({ onNewMonitorClick }) {
               </tr>
             </thead>
             <tbody>
-              {monitors.map((m) => (
-                <tr key={m.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td style={{ padding: 'var(--space-3) var(--space-4)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                      <span className={`status-dot ${m.is_active ? 'status-dot-up' : 'status-dot-down'}`}></span>
-                      <span style={{ fontSize: 'var(--text-xs)', textTransform: 'capitalize', color: m.is_active ? 'var(--status-up)' : 'var(--text-muted)' }}>
-                        {m.is_active ? 'Active' : 'Paused'}
+              {monitors.map((m) => {
+                const isSelected = selectedMonitor?.id === m.id;
+                const isChecking = checkingId === m.id;
+                const isUp = m.status === 'up' || m.status === 'active';
+
+                return (
+                  <tr
+                    key={m.id}
+                    style={{
+                      borderBottom: '1px solid var(--border)',
+                      backgroundColor: isSelected ? 'var(--bg-subtle)' : 'transparent',
+                    }}
+                  >
+                    <td style={{ padding: 'var(--space-3) var(--space-4)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                        <span className={`status-dot ${isUp ? 'status-dot-up' : 'status-dot-down'}`}></span>
+                        <span style={{ fontSize: 'var(--text-xs)', textTransform: 'capitalize', color: isUp ? 'var(--status-up)' : 'var(--status-down)' }}>
+                          {m.status}
+                        </span>
+                      </div>
+                    </td>
+                    <td style={{ padding: 'var(--space-3) var(--space-4)', fontWeight: 500 }}>
+                      <button
+                        onClick={() => handleSelectMonitor(m)}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: 'var(--text-primary)',
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          padding: 0,
+                        }}
+                      >
+                        {m.name}
+                      </button>
+                    </td>
+                    <td style={{ padding: 'var(--space-3) var(--space-4)', color: 'var(--text-secondary)' }}>
+                      <span className="font-mono" style={{ fontSize: 'var(--text-xs)' }}>
+                        {m.type === 'http' ? m.url : `${m.hostname}:${m.port}`}
                       </span>
-                    </div>
-                  </td>
-                  <td style={{ padding: 'var(--space-3) var(--space-4)', fontWeight: 500 }}>
-                    {m.name}
-                  </td>
-                  <td style={{ padding: 'var(--space-3) var(--space-4)', color: 'var(--text-secondary)' }}>
-                    <span className="font-mono" style={{ fontSize: 'var(--text-xs)' }}>
-                      {m.type === 'http' ? m.url : `${m.hostname}:${m.port}`}
-                    </span>
-                  </td>
-                  <td style={{ padding: 'var(--space-3) var(--space-4)', color: 'var(--text-muted)', fontSize: 'var(--text-xs)' }}>
-                    {m.interval_seconds}s
-                  </td>
-                  <td style={{ padding: 'var(--space-3) var(--space-4)', textAlign: 'right' }}>
-                    <div style={{ display: 'inline-flex', gap: 'var(--space-2)' }}>
-                      <button
-                        onClick={() => handleTogglePause(m)}
-                        className="btn-secondary"
-                        style={{ padding: '3px 8px', fontSize: 'var(--text-xs)' }}
-                      >
-                        {m.is_active ? 'Pause' : 'Resume'}
-                      </button>
-                      <button
-                        onClick={() => handleDelete(m.id)}
-                        className="btn-secondary"
-                        style={{ padding: '3px 8px', fontSize: 'var(--text-xs)', color: 'var(--status-down)' }}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td style={{ padding: 'var(--space-3) var(--space-4)', color: 'var(--text-muted)', fontSize: 'var(--text-xs)' }}>
+                      {m.interval_seconds}s
+                    </td>
+                    <td style={{ padding: 'var(--space-3) var(--space-4)', textAlign: 'right' }}>
+                      <div style={{ display: 'inline-flex', gap: 'var(--space-2)' }}>
+                        <button
+                          onClick={() => handleRunCheck(m)}
+                          disabled={isChecking}
+                          className="btn-secondary"
+                          style={{ padding: '3px 8px', fontSize: 'var(--text-xs)' }}
+                        >
+                          {isChecking ? 'Probing...' : 'Check now'}
+                        </button>
+                        <button
+                          onClick={() => handleTogglePause(m)}
+                          className="btn-secondary"
+                          style={{ padding: '3px 8px', fontSize: 'var(--text-xs)' }}
+                        >
+                          {m.is_active ? 'Pause' : 'Resume'}
+                        </button>
+                        <button
+                          onClick={() => handleDelete(m.id)}
+                          className="btn-secondary"
+                          style={{ padding: '3px 8px', fontSize: 'var(--text-xs)', color: 'var(--status-down)' }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Check Results Telemetry Drawer */}
+      {selectedMonitor && (
+        <div style={{
+          borderTop: '1px solid var(--border)',
+          backgroundColor: 'var(--bg-subtle)',
+          padding: 'var(--space-4) var(--space-5)',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
+            <div>
+              <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 600 }}>
+                Recent probe results: <span style={{ color: 'var(--accent)' }}>{selectedMonitor.name}</span>
+              </h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: 'var(--text-xs)' }}>
+                Time-series execution history recorded from regional probe workers
+              </p>
+            </div>
+            <button
+              onClick={() => handleSelectMonitor(selectedMonitor)}
+              style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 'var(--text-xs)' }}
+            >
+              Hide history
+            </button>
+          </div>
+
+          {historyLoading ? (
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', padding: 'var(--space-3) 0' }}>
+              Fetching probe telemetry...
+            </div>
+          ) : historyResults.length === 0 ? (
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', padding: 'var(--space-3) 0' }}>
+              No probe executions recorded yet. Click <strong>&quot;Check now&quot;</strong> above to trigger an immediate check!
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-xs)' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left', color: 'var(--text-muted)' }}>
+                    <th style={{ padding: 'var(--space-2)' }}>TIMESTAMP</th>
+                    <th style={{ padding: 'var(--space-2)' }}>STATUS</th>
+                    <th style={{ padding: 'var(--space-2)' }}>LATENCY</th>
+                    <th style={{ padding: 'var(--space-2)' }}>CODE</th>
+                    <th style={{ padding: 'var(--space-2)' }}>REGION</th>
+                    <th style={{ padding: 'var(--space-2)' }}>DETAILS / ERROR</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historyResults.map((r) => (
+                    <tr key={r.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td style={{ padding: 'var(--space-2)', color: 'var(--text-secondary)' }}>
+                        {new Date(r.timestamp).toLocaleTimeString()}
+                      </td>
+                      <td style={{ padding: 'var(--space-2)' }}>
+                        <span style={{
+                          fontWeight: 600,
+                          color: r.status === 'up' ? 'var(--status-up)' : 'var(--status-down)',
+                        }}>
+                          {r.status.toUpperCase()}
+                        </span>
+                      </td>
+                      <td style={{ padding: 'var(--space-2)' }}>
+                        <span className="font-mono">{r.response_time_ms} ms</span>
+                      </td>
+                      <td style={{ padding: 'var(--space-2)', color: 'var(--text-secondary)' }}>
+                        {r.status_code || '—'}
+                      </td>
+                      <td style={{ padding: 'var(--space-2)', color: 'var(--text-muted)' }}>
+                        {r.region}
+                      </td>
+                      <td style={{ padding: 'var(--space-2)', color: r.error_message ? 'var(--status-down)' : 'var(--text-muted)' }}>
+                        {r.error_message || 'OK'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>

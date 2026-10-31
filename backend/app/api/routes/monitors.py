@@ -5,9 +5,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.core.database import get_db_session
+from app.models.check_result import CheckResult
 from app.models.monitor import Monitor, MonitorStatus
 from app.models.user import User
+from app.schemas.check_result import CheckResultResponse
 from app.schemas.monitor import MonitorCreate, MonitorResponse, MonitorUpdate
+from app.services.prober import execute_http_probe, execute_tcp_probe, record_check_result
 
 router = APIRouter(prefix="/monitors", tags=["Monitors"])
 
@@ -172,3 +175,69 @@ async def delete_monitor(
     await db.delete(monitor)
     await db.commit()
     return None
+
+
+@router.post("/{monitor_id}/check", response_model=CheckResultResponse)
+async def trigger_monitor_check(
+    monitor_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """
+    Execute an on-demand probe for a specific monitor and record its result.
+    """
+    stmt = select(Monitor).where(Monitor.id == monitor_id, Monitor.user_id == current_user.id)
+    result = await db.execute(stmt)
+    monitor = result.scalar_one_or_none()
+
+    if not monitor:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Monitor not found")
+
+    if monitor.type == "http":
+        probe_data = await execute_http_probe(
+            url=monitor.url,
+            method=monitor.method,
+            headers=monitor.headers,
+            body=monitor.body,
+            expected_status=monitor.expected_status_code,
+            expected_body=monitor.expected_body_substring,
+            timeout=float(monitor.timeout_seconds),
+        )
+    elif monitor.type == "tcp":
+        probe_data = await execute_tcp_probe(
+            hostname=monitor.hostname,
+            port=monitor.port,
+            timeout=float(monitor.timeout_seconds),
+        )
+    else:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unsupported monitor type: {monitor.type}")
+
+    check_record = await record_check_result(db, monitor, probe_data)
+    return check_record
+
+
+@router.get("/{monitor_id}/results", response_model=List[CheckResultResponse])
+async def get_monitor_results(
+    monitor_id: str,
+    limit: int = Query(default=30, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """
+    Fetch historical check results for a monitor (latest first).
+    """
+    stmt = select(Monitor).where(Monitor.id == monitor_id, Monitor.user_id == current_user.id)
+    result = await db.execute(stmt)
+    monitor = result.scalar_one_or_none()
+
+    if not monitor:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Monitor not found")
+
+    results_stmt = (
+        select(CheckResult)
+        .where(CheckResult.monitor_id == monitor_id)
+        .order_by(CheckResult.timestamp.desc())
+        .limit(limit)
+    )
+    res = await db.execute(results_stmt)
+    return res.scalars().all()
